@@ -75,3 +75,12 @@ You must have tclsh installed. If not:
 sudo apt-get install tcl
 ```
    
+## Day 2: Variable Creation and Processing Constraints from CSV
+### Task - 2: Convert .csv input to format [1] (as required by the TCL script) and SDC (Synopsys Design Constraints) format
+
+1. Setup & Install Required TCL Packages
+   ```
+   sudo apt update
+   sudo apt install tcllib
+   ```
+2. 
