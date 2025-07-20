@@ -40,14 +40,20 @@ We need to create a UNIX script (custom command), "vsdsynth".
    ```
    ./vsdsynth
    ```
+   <img width="578" height="271" alt="image" src="https://github.com/user-attachments/assets/843efe3c-caee-4934-944b-ef7236886599" />
+
    Case 2: Non-existent file
    ```
    ./vsdsynth dummy.csv
    ```
+   <img width="689" height="270" alt="image" src="https://github.com/user-attachments/assets/3c411c02-b5e1-4e7a-9053-9a40c6c2b63d" />
+
    Case 3: Help
    ```
    ./vsdsynth -help
    ```
+   <img width="599" height="398" alt="image" src="https://github.com/user-attachments/assets/6f0dc211-238a-4831-9b50-ecd6364f33c9" />
+
    Case 4: Valid CSV file
    Create a dummy CSV:
    ```
@@ -57,6 +63,8 @@ We need to create a UNIX script (custom command), "vsdsynth".
    ```
    ./vsdsynth test.csv
    ```
+   <img width="657" height="272" alt="image" src="https://github.com/user-attachments/assets/3b3f0fe3-a01d-4352-8bbd-7007aa91d861" />
+
 If you're using bash by default, but want to use tcsh, install it with:
 ```
 sudo apt-get install tcsh  # For Ubuntu/Debian
