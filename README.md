@@ -100,7 +100,8 @@ sudo apt-get install tcl
    m link my_arr
    set rows [m rows]
    ```
-   
+   <img width="1212" height="627" alt="image" src="https://github.com/user-attachments/assets/3eba9f7c-a05b-4f98-a02d-4ac9def81872" />
+
 3. Convert CSV to Variables (Remove Spaces and Normalize Paths)
    ```
    set i 0
@@ -114,6 +115,7 @@ sudo apt-get install tcl
       set i [expr {$i+1}]
    }
    ```
+   
 4. Print All Initialized Variables
    ```
    puts "\nInfo: Below are the list of the initial variables and their values:"
@@ -154,6 +156,10 @@ sudo apt-get install tcl
     puts "\nERROR: Cannot find constraints file: $ConstraintsFile. Exiting..."
     exit
    }
+   As shown in the figure, if all the files and directories mentioned exist, then we can go ahead with the next step.
+   <img width="1218" height="818" alt="image" src="https://github.com/user-attachments/assets/abe48a09-3788-44a2-b9d8-154a3c2b3925" />
+
+   
 6. Convert Constraints CSV into Matrix
    ```
    puts "\nInfo: Dumping SDC constraints for $DesignName"
