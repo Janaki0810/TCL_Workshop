@@ -199,5 +199,6 @@ sudo apt-get install tcl
    <img width="1152" height="858" alt="image" src="https://github.com/user-attachments/assets/ee3fe774-84cc-4df3-9adf-b1a9c238ce76" />
 
     
+## Day 3: Processing clock and input constraints
 
 
