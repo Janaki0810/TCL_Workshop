@@ -83,6 +83,8 @@ sudo apt-get install tcl
    sudo apt update
    sudo apt install tcllib
    ```
+   <img width="1638" height="903" alt="image" src="https://github.com/user-attachments/assets/c7eb72cc-9909-43f2-b698-a10e0ed08b62" />
+
 2. Read openMSP430_design_details.csv and Create Variables
    ```
    set filename [lindex $argv 0]
@@ -98,6 +100,7 @@ sudo apt-get install tcl
    m link my_arr
    set rows [m rows]
    ```
+   
 3. Convert CSV to Variables (Remove Spaces and Normalize Paths)
    ```
    set i 0
@@ -151,6 +154,55 @@ sudo apt-get install tcl
     puts "\nERROR: Cannot find constraints file: $ConstraintsFile. Exiting..."
     exit
    }
+6. Convert Constraints CSV into Matrix
+   ```
+   puts "\nInfo: Dumping SDC constraints for $DesignName"
 
+   ::struct::matrix constraints
+   set chan [open $ConstraintsFile]
+   csv::read2matrix $chan constraints , auto
+   close $chan
+
+   set constr_rows [constraints rows]
+   set constr_columns [constraints columns]
+
+   puts "Number of rows in constraints file = $constr_rows"
+   puts "Number of columns in constraints file = $constr_columns"
+   ```
+7. Find Start Indexes of Clock/Input/Output Constraints
+   ```
+   set clock_start [lindex [lindex [constraints search all CLOCKS] 0] 1]
+   set clock_start_column [lindex [lindex [constraints search all CLOCKS] 0] 0]
+   puts "clock_start =  $clock_start"
+   puts "clock_start_column = $clock_start_column"
+
+   set input_ports_start [lindex [lindex [ constraints search all INPUTS] 0] 1]
+   puts "input_ports_start = $input_ports_start"
+
+   set output_ports_start [lindex [lindex [ constraints search all OUTPUTS] 0] 1]
+   puts "output_ports_start = $output_ports_start"
+   ```
+8. Parse and Convert to SDC Format (To be Added in Step 9)
+9. Collect All Verilog Files and Write Yosys Script
+   ```
+   set verilog_files [glob -nocomplain -directory $NetlistDirectory *.v]
+   set yosys_script "$OutputDirectory/synth.ys"
+   set ys [open $yosys_script "w"]
+
+   puts $ys "read_liberty -lib $EarlyLibraryPath"
+   foreach file $verilog_files {
+       puts $ys "read_verilog $file"
+   }
+   puts $ys "synth -top $DesignName"
+   puts $ys "write_verilog $OutputDirectory/${DesignName}_synth.v"
+   puts $ys "write_sdc $OutputDirectory/${DesignName}_synth.sdc"
+
+   close $ys
+   ```
+10. Run Yosys Synthesis
+    ```
+    exec yosys $yosys_script
+    ```
+    
 
 
