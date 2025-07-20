@@ -222,6 +222,8 @@ puts "clock_early_fall_slew_start = $clock_early_fall_slew_start"
 puts "clock_late_rise_slew_start = $clock_late_rise_slew_start"
 puts "clock_late_fall_slew_start = $clock_late_fall_slew_start"
 ```
+<img width="811" height="832" alt="image" src="https://github.com/user-attachments/assets/f97612a7-0a06-4640-8ea7-9d404759787c" />
+
 3. Open the SDC file for writing the clock constraints
 ```
 set sdc_file [open $OutputDirectory/$DesignName.sdc "w"]
@@ -245,6 +247,10 @@ while {$i < $end_of_ports} {
     set i [expr {$i+1}]
 }
 ```
+<img width="1219" height="630" alt="image" src="https://github.com/user-attachments/assets/609f0287-85eb-487d-81e7-0dbf4393e002" />
+
+In the figure above, we can see that the clock parameters are successfully written into the .sdc file. We also verified that the values match exactly with those specified in the constraints.csv file.
+
 5. Get input constraint column indices for delay and slew
 ```
 set input_early_rise_delay_start [lindex [lindex [constraints search rect $clock_start_column $input_ports_start [expr {$constr_columns-1}] [expr {$output_ports_start-1}] early_rise_delay] 0] 0]
@@ -267,7 +273,14 @@ puts "input_early_fall_slew_start = $input_early_fall_slew_start"
 puts "input_late_rise_slew_start = $input_late_rise_slew_start"
 puts "input_late_fall_slew_start = $input_late_fall_slew_start"
 ```
-7. Check verilog declarations and categorize bussed vs single-port 
+<img width="530" height="520" alt="image" src="https://github.com/user-attachments/assets/b71c5e62-9220-4390-a04e-7e2e1259da28" />
+
+7. Check verilog declarations and categorize bussed vs single-port
+
+<img width="1294" height="726" alt="image" src="https://github.com/user-attachments/assets/ecf8b000-688c-441f-a9b3-d4ed376aee66" />
+
+In the figure above, we observe that some input ports are bussed while others are not. However, the constraints.csv file does not indicate which ports are part of a bus and which are individual signals. For better clarity and compatibility with the OpenTimer tool, we need to expand bussed ports into their individual bits. To do this, we must identify whether each input port is a single-bit port or a bus. If it is a bus, we are going to append a '*' to the port name in the .sdc file.
+
 ```
 set i [expr {$input_ports_start+1}]
 set end_of_ports [expr {$output_ports_start-1}]
