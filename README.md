@@ -100,7 +100,6 @@ sudo apt-get install tcl
    m link my_arr
    set rows [m rows]
    ```
-   <img width="1212" height="627" alt="image" src="https://github.com/user-attachments/assets/3eba9f7c-a05b-4f98-a02d-4ac9def81872" />
 
 3. Convert CSV to Variables (Remove Spaces and Normalize Paths)
    ```
@@ -115,6 +114,7 @@ sudo apt-get install tcl
       set i [expr {$i+1}]
    }
    ```
+   <img width="1212" height="627" alt="image" src="https://github.com/user-attachments/assets/3eba9f7c-a05b-4f98-a02d-4ac9def81872" />
    
 4. Print All Initialized Variables
    ```
@@ -126,6 +126,8 @@ sudo apt-get install tcl
    puts "LateLibraryPath = $LateLibraryPath"
    puts "ConstraintsFile = $ConstraintsFile"
    ```
+   <img width="1163" height="631" alt="image" src="https://github.com/user-attachments/assets/8677581b-2aa5-409e-9259-c85b4c31fe8f" />
+
 5. Check If Paths Exist, Create or Exit Accordingly
    ```
    if { [file isdirectory $OutputDirectory]} {
@@ -156,6 +158,7 @@ sudo apt-get install tcl
     puts "\nERROR: Cannot find constraints file: $ConstraintsFile. Exiting..."
     exit
    }
+   ```
    As shown in the figure, if all the files and directories mentioned exist, then we can go ahead with the next step.
    <img width="1218" height="818" alt="image" src="https://github.com/user-attachments/assets/abe48a09-3788-44a2-b9d8-154a3c2b3925" />
 
@@ -175,7 +178,12 @@ sudo apt-get install tcl
    puts "Number of rows in constraints file = $constr_rows"
    puts "Number of columns in constraints file = $constr_columns"
    ```
-7. Find Start Indexes of Clock/Input/Output Constraints
+   <img width="396" height="40" alt="image" src="https://github.com/user-attachments/assets/0e3f319c-607a-4cff-972a-a6401ee16c59" />
+
+   <img width="1449" height="879" alt="image" src="https://github.com/user-attachments/assets/7040eefa-7747-4c54-af6d-e2d1e07f55e8" />
+
+
+7. Convert to SDC and Find Start Indexes of Clock/Input/Output Constraints
    ```
    set clock_start [lindex [lindex [constraints search all CLOCKS] 0] 1]
    set clock_start_column [lindex [lindex [constraints search all CLOCKS] 0] 0]
@@ -188,27 +196,8 @@ sudo apt-get install tcl
    set output_ports_start [lindex [lindex [ constraints search all OUTPUTS] 0] 1]
    puts "output_ports_start = $output_ports_start"
    ```
-8. Parse and Convert to SDC Format (To be Added in Step 9)
-9. Collect All Verilog Files and Write Yosys Script
-   ```
-   set verilog_files [glob -nocomplain -directory $NetlistDirectory *.v]
-   set yosys_script "$OutputDirectory/synth.ys"
-   set ys [open $yosys_script "w"]
+   <img width="1152" height="858" alt="image" src="https://github.com/user-attachments/assets/ee3fe774-84cc-4df3-9adf-b1a9c238ce76" />
 
-   puts $ys "read_liberty -lib $EarlyLibraryPath"
-   foreach file $verilog_files {
-       puts $ys "read_verilog $file"
-   }
-   puts $ys "synth -top $DesignName"
-   puts $ys "write_verilog $OutputDirectory/${DesignName}_synth.v"
-   puts $ys "write_sdc $OutputDirectory/${DesignName}_synth.sdc"
-
-   close $ys
-   ```
-10. Run Yosys Synthesis
-    ```
-    exec yosys $yosys_script
-    ```
     
 
 
