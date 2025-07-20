@@ -24,4 +24,38 @@ We need to create a UNIX script (custom command), "vsdsynth".
 2. Creating the logo
    <img width="935" height="693" alt="image" src="https://github.com/user-attachments/assets/4e432aa9-21f7-458a-b683-30c89831b278" />
 
+3. Making the script executable
+   ```
+   chmod +x vsdsynth
+   ```
+
+4. Create a dummy vsdsynth.tcl file
+   This is to test if everything connects properly
+   ```
+   echo 'puts "TCL script executed with file: $argv"' > vsdsynth.tcl
+   ```
+
+5. Test the script
+   Case 1: No arguments
+   ```
+   ./vsdsynth
+   ```
+   Case 2: Non-existent file
+   ```
+   ./vsdsynth dummy.csv
+   ```
+   Case 3: Help
+   ```
+   ./vsdsynth -help
+   ```
+   Case 4: Valid CSV file
+   Create a dummy CSV:
+   ```
+   touch test.csv
+   ```
+   Then run:
+   ```
+   ./vsdsynth test.csv
+   ```
+
    
