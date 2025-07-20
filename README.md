@@ -57,5 +57,13 @@ We need to create a UNIX script (custom command), "vsdsynth".
    ```
    ./vsdsynth test.csv
    ```
-
+If you're using bash by default, but want to use tcsh, install it with:
+```
+sudo apt-get install tcsh  # For Ubuntu/Debian
+sudo yum install tcsh      # For Oracle Linux/CentOS
+```
+You must have tclsh installed. If not:
+```
+sudo apt-get install tcl
+```
    
