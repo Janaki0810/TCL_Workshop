@@ -16,9 +16,12 @@ We are given several tasks to understand how TCL is used for automation -
 ### Task - 1: Create a custom command (ex. vsdsynth) to pass .csv files from the UNIX shell to the TCL script
 We need to create a UNIX script (custom command), "vsdsynth". 
 
-1. Informing the system know it's a UNIX script
+1. Informing the system that it's a UNIX script
    ```
    #!/bin/tcsh -f
    ```
-   
+
+2. Creating the logo
+   <img width="935" height="693" alt="image" src="https://github.com/user-attachments/assets/4e432aa9-21f7-458a-b683-30c89831b278" />
+
    
