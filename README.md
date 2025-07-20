@@ -83,4 +83,74 @@ sudo apt-get install tcl
    sudo apt update
    sudo apt install tcllib
    ```
-2. 
+2. Read openMSP430_design_details.csv and Create Variables
+   ```
+   set filename [lindex $argv 0]
+   package require csv
+   package require struct::matrix
+   struct::matrix m
+
+   set f [open $filename]
+   csv::read2matrix $f m , auto
+   close $f
+
+   set columns [m columns]
+   m link my_arr
+   set rows [m rows]
+   ```
+3. Convert CSV to Variables (Remove Spaces and Normalize Paths)
+   ```
+   set i 0
+   while {$i < $rows} {
+      puts "\nInfo: Setting $my_arr(0,$i) as '$my_arr(1,$i)'"
+      if {$i == 0} {
+        set [string map {" " ""} $my_arr(0,$i)] $my_arr(1,$i)
+      } else {
+        set [string map {" " ""} $my_arr(0,$i)] [file normalize $my_arr(1,$i)]
+      }
+      set i [expr {$i+1}]
+   }
+   ```
+4. Print All Initialized Variables
+   ```
+   puts "\nInfo: Below are the list of the initial variables and their values:"
+   puts "DesignName = $DesignName"
+   puts "OutputDirectory = $OutputDirectory"
+   puts "NetlistDirectory = $NetlistDirectory"
+   puts "EarlyLibraryPath = $EarlyLibraryPath"
+   puts "LateLibraryPath = $LateLibraryPath"
+   puts "ConstraintsFile = $ConstraintsFile"
+   ```
+5. Check If Paths Exist, Create or Exit Accordingly
+   ```
+   if { [file isdirectory $OutputDirectory]} {
+    puts "\nInfo : Output directory exists and found in path $OutputDirectory "
+   } else {
+    puts "\nInfo : Cannot find output directory. Creating $OutputDirectory"
+    file mkdir $OutputDirectory
+   }
+
+   if { [file isdirectory $NetlistDirectory]} {
+    puts "\nInfo : Netlist directory exists at $NetlistDirectory "
+   } else {
+    puts "\nInfo : Cannot find Netlist directory. Creating $NetlistDirectory"
+    file mkdir $NetlistDirectory
+   } 
+
+   if { ![file exists $EarlyLibraryPath]} {
+    puts "\nERROR: Cannot find early library: $EarlyLibraryPath. Exiting..."
+    exit
+   }
+
+   if { ![file exists $LateLibraryPath]} {
+    puts "\nERROR: Cannot find late library: $LateLibraryPath. Exiting..."
+    exit
+   }
+
+   if { ![file exists $ConstraintsFile]} {
+    puts "\nERROR: Cannot find constraints file: $ConstraintsFile. Exiting..."
+    exit
+   }
+
+
+
