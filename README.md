@@ -10,4 +10,7 @@ The given task is further divided into subtasks -
 1. Create a custom command (ex. vsdsynth) to pass .csv files from the UNIX shell to the TCL script
 2. Convert .csv input to format [1] (as required by the TCL script) and SDC (Synopsys Design Constraints) format
 3. The converted inputs are passed to Yosys synthesis tool (conversion to format [1] is done as Yosys does not support .csv files directly)
+4. Convert the outputs (format [1] + SDC) to format [2] for use with the OpenTimer tool for Static Timing Analysis (STA).
+5. Generate a final report showing timing results.
+
 
