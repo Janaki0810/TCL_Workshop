@@ -741,12 +741,9 @@ close $tmp_file
 ```
 The above script is used to convert create_clock constraitns into format [2] which can be understandable by Opentimer tool. Basically it searches a pattern **create_clock** and gets the clock_port_name, clock_period and calucaltes dutry cycle. And then writes all the above values in /tmp/3 file as shown in below figure.
 
-<img width="717" <img width="1316" height="903" alt="image" src="https://github.com/user-attachments/assets/927ae7f3-3924-4652-ac5a-6260445751d9" />
-height="192" alt="image" src="https://github.com/user-attachments/assets/a2ab3d64-e6ec-42b5-bcc6-b1a051d82792" />
-
-
-
-
+<img width="569" height="131" alt="image" src="https://github.com/user-attachments/assets/f1d0643e-5e07-4c86-8d10-bb64d97ca230" />
+<img width="562" height="70" alt="image" src="https://github.com/user-attachments/assets/1a7d6365-ec32-4666-83a5-b6584e933e36" />
+<img width="1853" height="953" alt="image" src="https://github.com/user-attachments/assets/b73aa964-222f-427c-9428-0ed69da6f65d" />
 
 ```
 set find_keyword [lsearch -all -inline $lines "set_clock_latency*"]
