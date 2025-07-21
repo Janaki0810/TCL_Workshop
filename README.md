@@ -345,3 +345,104 @@ while {$i < $end_of_ports} {
 <img width="1243" height="716" alt="image" src="https://github.com/user-attachments/assets/c114ac02-dc44-41f3-9229-fa13a3038d5f" />
 
 # Day 4: Complete Scripting and Yosys Synthesis Introduction
+In this module, we will complete the sub-task 2 by converting output constraints into sdc format. We will also do the synthesis by using Yosys tool.
+
+In the previous module we have completed converting input constraints into sdc format. Similarly, do the same process for output parameters. We have to change only some parameters such as setting **i**_as **$output_ports_start** etc..
+
+The script mentioned below finds the column number of the output parameters.
+```
+set output_early_rise_delay_start [lindex [lindex [constraints search rect $clock_start_column $output_ports_start [expr {$constr_columns-1}] [expr {$constr_rows-1}]  early_rise_delay] 0 ] 0]
+set output_early_fall_delay_start [lindex [lindex [constraints search rect $clock_start_column $output_ports_start [expr {$constr_columns-1}] [expr {$constr_rows-1}]  early_fall_delay] 0 ] 0]
+set output_late_rise_delay_start [lindex [lindex [constraints search rect $clock_start_column $output_ports_start [expr {$constr_columns-1}] [expr {$constr_rows-1}]  late_rise_delay] 0 ] 0]
+set output_late_fall_delay_start [lindex [lindex [constraints search rect $clock_start_column $output_ports_start [expr {$constr_columns-1}] [expr {$constr_rows-1}]  late_fall_delay] 0 ] 0]
+set output_load_start [lindex [lindex [constraints search rect $clock_start_column $output_ports_start [expr {$constr_columns-1}] [expr {$constr_rows-1}]  load] 0 ] 0]
+set related_clock [lindex [lindex [constraints search rect $clock_start_column $output_ports_start [expr {$constr_columns-1}] [expr {$constr_rows-1}]  clocks] 0 ] 0]
+puts "output_early_rise_delay_start =$output_early_rise_delay_start"
+puts "output_early_fall_delay_start =$output_early_fall_delay_start"
+puts "output_late_rise_delay_start =$output_late_rise_delay_start"
+puts "output_late_fall_delay_start =$output_late_fall_delay_start"
+puts "output_load_start =$output_load_start"
+```
+We can find the output parameters column numbers in the below figure.
+<img width="852" height="633" alt="image" src="https://github.com/user-attachments/assets/21c38406-39ac-4921-86e6-e12e9dc27840" />
+
+
+We have to develop an alogrithm to check if the output ports are bussed or not. If bussd, concat "*" at the end of port name. Then write the output parameters into .sdc format in a particular sdc foramt. The script mentioned below does the above purpose.
+
+```
+set i [expr {$output_ports_start+1}]
+set end_of_ports [expr {$constr_rows-1}]
+puts "\nInfo-SDC: Working on Output constraints....."
+puts "\nInfo-SDC: Categorizing output ports as bits and bussed"
+
+while { $i < $end_of_ports } {
+
+set netlist [glob -dir $NetlistDirectory *.v]
+set tmp_file [open /tmp/1 w]
+
+foreach f $netlist {
+        set fd [open $f]
+		#puts "reading file $f"
+        while {[gets $fd line] != -1} {
+			set pattern1 " [constraints get cell 0 $i];"
+            if {[regexp -all -- $pattern1 $line]} {
+			#puts "\npattern1 \"$pattern1\" found and matching line in verilog file \"$f\" is \"$line\""
+				set pattern2 [lindex [split $line ";"] 0]
+			#puts "\ncreating pattern2 by splitting pattern1 using semi-colon as delimiter => \"$pattern2\""
+				if {[regexp -all {outptu} [lindex [split $pattern2 "\S+"] 0]]} {	
+			#puts "\nout of all patterns, \"$pattern2\" has matching string \"input\". So preserving this line and ignoring others"
+				set s1 "[lindex [split $pattern2 "\S+"] 0] [lindex [split $pattern2 "\S+"] 1] [lindex [split $pattern2 "\S+"] 2]"
+				#puts "\nprinting first 3 elements of pattern as \"$s1\" using space as delimiter"
+				puts -nonewline $tmp_file "\n[regsub -all {\s+} $s1 " "]"
+				#puts "\nreplace multiple spaces in s1 by space and reformat as \"[regsub -all {\s+} $s1 " "]\""
+				}
+				#else { " \"$pattern2\" didnt have first term as 'output'"}
+        	}
+        }
+close $fd
+}
+close $tmp_file
+
+set tmp_file [open /tmp/1 r]
+set tmp2_file [open /tmp/2 w]
+#puts "reading [read $tmp_file]"
+#puts "reading /tmp/1 file as  [split [read $tmp_file] \n]] ]"
+#puts "sorting /tmp/1 file as [lsort -unique [split [read $tmp_file] \n]]"
+#puts "joining /tmp/1 file as [join [lsort -unique [split [read $tmp_file] \n]] \n]"
+puts -nonewline $tmp2_file "[join [lsort -unique [split [read $tmp_file] \n]] \n]"
+close $tmp_file
+close $tmp2_file
+set tmp2_file [open /tmp/2 r]
+
+set count [llength [read $tmp2_file]] 
+#puts "Count is $count"
+if {$count > 2} { 
+    set op_ports [concat [constraints get cell 0 $i]*]
+	#puts "\n Bussed"
+} else {
+
+    set op_ports [constraints get cell 0 $i]
+	#puts "\n Not Bussed"
+}
+	#puts "output port name is $inp_ports and count is $count"
+
+	puts -nonewline $sdc_file "\nset_output_delay -clock  [constraints get cell $related_clock $i] -min -rise  [constraints get cell $output_early_rise_delay_start $i] \[get_ports $op_ports\]"
+        puts -nonewline $sdc_file "\nset_output_delay -clock  [constraints get cell $related_clock $i] -min -fall  [constraints get cell $output_early_fall_delay_start $i] \[get_ports $op_ports\]"
+        puts -nonewline $sdc_file "\nset_output_delay -clock  [constraints get cell $related_clock $i] -max -rise  [constraints get cell $output_late_rise_delay_start $i] \[get_ports $op_ports\]"
+        puts -nonewline $sdc_file "\nset_output_delay -clock  [constraints get cell $related_clock $i] -max -fall  [constraints get cell $output_late_fall_delay_start $i] \[get_ports $op_ports\]"
+		puts -nonewline $sdc_file "\nset_load [constraints get cell $output_load_start $i] \[get_ports $op_ports\]"
+
+
+
+	set i [expr {$i+1}]
+
+}
+puts "\n Info:SDC Created .Please use the constraints path $OutputDirectory/$DesignName.sdc"
+close $tmp2_file
+
+close $sdc_file
+```
+
+We can see the output parameters are written in sdc format in .sdc file 
+
+After the successful completion of writng all constraints parameters into .sdc file, we get a message saying "SDC created.Please use the constraints path /home/vsduser/SynthTime/outdir_openMSP430/$openMSP430.sdc" 
