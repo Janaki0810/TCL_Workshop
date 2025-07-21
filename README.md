@@ -446,3 +446,641 @@ close $sdc_file
 We can see the output parameters are written in sdc format in .sdc file 
 
 After the successful completion of writng all constraints parameters into .sdc file, we get a message saying "SDC created.Please use the constraints path /home/vsduser/SynthTime/outdir_openMSP430/$openMSP430.sdc" 
+
+#### Creating Scripts for Hierarchy check
+
+
+```
+
+puts "\n Info: Creating hierarchy check script to be used by Yosys"
+set data "read_liberty -lib -ignore_miss_dir -setattr blackbox ${LateLibraryPath}"
+#puts "data is \"$data\""
+set filename "$DesignName.hier.ys"
+#puts "\nfilename is \"$filename\""
+set fileId [open $OutputDirectory/$filename "w"]
+#puts "open \"$OutputDirectory/$filename"\ in write mode"
+puts -nonewline $fileId $data
+#puts "netlist is \"$netlist\""
+set netlist [glob -dir $NetlistDirectory *.v]
+foreach f $netlist {
+	set data $f
+	#puts "data is \"$f\""
+	puts -nonewline $fileId "\n read_verilog $f"
+}
+puts -nonewline $fileId "\nhierarchy -check"
+close $fileId
+
+```
+
+Whenever we uses **"exec"** command in the tcl script, it runs the command in terminal.
+
+We are runnimg running the yosys tool by passing **"openMSP430.heir.ys"** as input file and catches all the logs in  **"openMSP430.hierarchy_check.log"**
+
+If there is an error, **"my_error"** will be set to 1 and we have to find the error. In yosys when error occurs, then we will find a common pattern such as **"referenced in module"** . It differs across various tools. We have to search each lines of .log file and prints the error statement. The script mentioned below does the above purpose. If the hierarchy check passes then it displays a message saying **"Hierarchy check PASS"**
+
+```
+set my_error [catch { exec yosys -s $OutputDirectory/$DesignName.hier.ys >& $OutputDirectory/$DesignName.hierarchy_check.log} msg]
+puts "Error flag is \"$my_error\""
+if { $my_error } {
+	set filename "$OutputDirectory/$DesignName.hierarchy_check.log"
+	puts "log file name is \"$filename\" "
+	set pattern "referenced in module"
+	#puts "pattern is $pattern"
+	set count 0
+	set fid [open $filename r]
+	while {[gets $fid line] != -1} {
+		# -- used to say end of command options. everything after this is args
+		incr count [regexp -all -- $pattern $line]
+		if {[regexp -all -- $pattern $line]} {
+			puts "\nError: module [lindex $line 2] is not part of design $DesignName. Please correct RTL in the path '$NetlistDirectory'"
+			puts "\nInfo: Hierarchy check FAIL"
+		}
+	}
+	close $fid
+} else {
+	puts "\nInfo: Hierarchy check PASS"
+}
+puts "\n Info: Please find the hierearchy check details in [file normalize $OutputDirectory/$DesignName.hierarchy.check.log] for more info"
+
+```
+
+- If an error doesn't occcur, then
+<img width="255" height="57" alt="image" src="https://github.com/user-attachments/assets/d7ded2eb-09ff-461a-9c0d-421b103e7fca" />
+
+
+
+- If an error occurs during hierarchy check then
+
+<img width="182" height="37" alt="image" src="https://github.com/user-attachments/assets/8b726e72-601e-4b24-b25c-23f0e3bfc097" />
+
+
+
+
+## Module 5: Advanced Scripting Techniques and Quality of Results Generation
+
+In module 5, we will develop script for synthesis and run yosys tool. Then we will talk about procs and discuss some procs that we are going to use in this task. We also convert the foramt [1] and sdc format into format [2] which can be understandable by Opentimer tool.
+
+#### Creating script for Synthesis
+```
+puts "\nInfo: Creating main synthesis script to be used for yosys"
+set data "read_liberty -lib -ignore_miss_dir -setattr blackbox ${LateLibraryPath}"
+set filename "$DesignName.ys"
+#puts "\nfilename is \"$filename\""
+set fileId [open $OutputDirectory/$filename "w"]
+#puts "open \"$OutputDirectory/$filename\" in write mode"
+puts -nonewline $fileId $data
+#puts "netlist is \"$netlist\""
+set netlist [glob -dir $NetlistDirectory *.v]
+foreach f $netlist {
+	set data $f
+	#puts "data is \"$f\""
+	puts -nonewline $fileId "\n read_verilog $f"
+}
+
+puts -nonewline $fileId "\nhierarchy -top $DesignName"
+puts -nonewline $fileId "\nsynth -top $DesignName"
+puts -nonewline $fileId "\nsplitnets -ports -format __\ndfflibmap -liberty ${LateLibraryPath}\nopt"
+puts -nonewline $fileId "\nabc -liberty ${LateLibraryPath}"
+puts -nonewline $fileId "\nflatten"
+puts -nonewline $fileId "\nclean -purge\niopadmap -outpad BUFX2 A:Y -bits\nopt \nclean"
+puts -nonewline $fileId "\nwrite_verilog $OutputDirectory/$DesignName.synth.v"
+close $fileId
+puts "\nInfo: Synthesis script created and can be accesed from the path $OutputDirectory/$filename"
+puts "\nInfo: Running Synthesis...."
+
+if {[catch { exec yosys -s $OutputDirectory/$DesignName.ys >& $OutputDirectory/$DesignName.synthesis.log} msg]} {
+	puts "\nError: Syntesis failed due to errors. Please refer to log $OutputDirectory/$DesignName.synthesis.log for errors"
+	exit
+} else {
+	puts "\nInfo: Synthesis finished sucessfully"
+}
+
+puts "\nInfo: Please refert olog $OutputDirectory/$DesignName.synthesis.log"
+
+```
+
+- The above script creates a __"openMSP430.ys"__ which can be passed to Yosys for synthesis purpose.
+- It writes all the netlist and all scripts necessary for synthesis into __"openMSP430.ys"__
+- By using __"exec"__ commnad we can run yosys via tcl command and all the logs are stored in openMSP430.synthesis.log
+- If there is an error, it displays a message "Error: Syntesis failed due to errors"
+
+
+```
+set fileId [open /tmp/1 "w"]
+puts -nonewline $fileId [exec grep -v -w "*" $OutputDirectory/$DesignName.synth.v]
+close $fileId
+
+set output [open $OutputDirectory/$DesignName.final.synth.v "w"]
+
+set filename "/tmp/1"
+set fid [open $filename r]
+	while {[gets $fid line] != -1} {
+	puts -nonewline $output [string map {"\\" ""} $line]
+	puts -nonewline $output "\n"
+}
+
+close $fid
+close $output
+
+puts "\nInfo: Please find the synthesized netlist for $DesignName at below path. You can use this netlist for STA or PNR"
+puts "\n$OutputDirectory/$DesignName.final.synth.v"
+
+```
+
+The above scirpt can be used to remove **\** from the gate level netlist. Because opentimer tool cannot understand the netlist with **\**  in it.As we can see we have 6119 **\**  in  the synt.v file as shown in the below figure. After running the above the count came down to 0.
+
+<img width="508" height="742" alt="image" src="https://github.com/user-attachments/assets/58015471-d513-4fbd-88ce-99443f1e8895" />
+
+
+#### Procs
+
+In Tcl, procedures (commonly called "procs") are a fundamental mechanism for creating reusable script blocks. They function similarly to functions or methods in other programming languages, allowing you to organize script into logical, reusable units.
+
+We are going to use some procs such as reopenStdout.proc, set_num_threads.proc, read_lib.proc, read_verilog.proc, read_sdc.proc to convert the foramt [1] and sdc format to format [2].
+
+1) reopenStdout.proc
+ 
+The __reopenStdout__ proc is a Tcl procedure used to redirect standard output to a file. This technique is sometimes called "reopening" stdout.
+
+```
+proc reopenStdout {file} {
+    close stdout
+    open $file w       
+}
+```
+This procedure works by:
+
+- Closing the current stdout channel
+
+- Opening a file in write mode and making it the new stdout channel
+
+When we call this procedure with a filename as an argument, all subsequent output that would normally go to the console will instead be written to the specified file. This is useful when you need to capture output from commands or procedures that write directly to stdout and don't provide an option to specify an output channel.
+
+2) set_num_threads.proc
+
+The __set_multi_cpu_usage__ proc is a Tcl procedure designed to configure multi-threading capabilities for EDA tools in ASIC design automation workflows. This procedure is part of TCL scripts that automate the frontend of ASIC design.
+
+```
+proc set_multi_cpu_usage {args} {
+    array set options {-localCpu <num_of_threads> -help "" }
+    foreach {switch value} [array get options] {
+    puts "Option $switch is $value"
+    }
+    while {[llength $args]} {
+    puts "llength is [llength $args]"
+    puts "lindex 0 of \"$args\" is [lindex $args 0]"
+        switch -glob -- [lindex $args 0] {
+          -localCpu {
+              puts "old args is $args"
+              set args [lassign $args - options(-localCpu)]
+              puts "new args is \"$args\""
+              puts "set_num_threads $options(-localCpu)"
+              }
+          -help {
+              puts "old args is $args"
+              set args [lassign $args - options(-help) ]
+              puts "new args is \"$args\""
+              puts "Usage: set_multi_cpu_usage -localCpu <num_of_threads>"
+              }
+        }
+    }
+}
+```
+It accepts command-line style arguments through a parameter array that manages options for local CPU thread allocation. When invoked with the -localCpu flag followed by a numeric value, the procedure configures the underlying EDA tools to utilize the specified number of processor threads for computationally intensive tasks like synthesis and timing analysis. This is accomplished by calling another procedure named set_num_threads with the appropriate thread count. The procedure also includes a helpful -help option that displays usage instructions when requested. 
+
+When __set_multi_cpu_usage -localCpu 8 -help__ commnad is executed, it will go through 2 iterations like in the 1st part shown below. When __set_multi_cpu_usage -localCpu 8__ command is executed, it will go through 1 iterations like shown in the below part.
+
+
+
+3) read_verilog.proc
+The read_verilog command is used to read Verilog or SystemVerilog source files into design tools. 
+
+```
+proc read_verilog {arg1} {
+puts "set_verilog_fpath $arg1"
+}
+```
+
+
+4) read_lib.proc
+
+The __read_lib proc__ is a Tcl procedure designed to handle library files in ASIC design automation workflows. This procedure is part of a larger TCL scripting framework that automates the frontend of ASIC design.
+
+The procedure accepts multiple options and converts standard library specifications into OpenTimer format.
+```
+proc read_lib args {
+	array set options {-late <late_lib_path> -early <early_lib_path> -help ""}
+	while {[llength $args]} {
+		switch -glob -- [lindex $args 0] {
+		-late {
+			set args [lassign $args - options(-late) ]
+			puts "set_late_celllib_fpath $options(-late)"
+		      }
+		-early {
+			set args [lassign $args - options(-early) ]
+			puts "set_early_celllib_fpath $options(-early)"
+		       }
+		-help {
+			set args [lassign $args - options(-help) ]
+			puts "Usage: read_lib -late <late_lib_path> -early <early_lib_path>"
+			puts "-late <provide late library path>"
+			puts "-early <provide early library path>"
+		      }	
+		default break
+		}
+	}
+}
+```
+
+The procedure has three main options:
+
+- -late: Specifies the path to the late library file used for setup timing analysis
+
+- -early: Specifies the path to the early library file used for hold timing analysis
+
+- -help: Displays usage information for the procedure
+
+When called with the appropriate options, the procedure generates commands in OpenTimer format (e.g., set_late_celllib_fpath and set_early_celllib_fpath) that are used by the timing analysis tool.
+
+This proc works alongside other procedures like read_verilog.proc and read_sdc.proc to convert standard design files into formats compatible with OpenTimer for static timing analysis. It's part of a comprehensive TCL framework for automating ASIC design flows, particularly for timing analysis and quality of results (QoR) generation.
+
+5) read_sdc.proc
+
+__read_sdc__ is a Tcl command used in EDA tools to read Synopsys Design Constraint (SDC) files into the design environment
+
+The read_sdc proc is a large proc file which will be covered in parts.
+
+```
+proc read_sdc {arg1} {
+set sdc_dirname [file dirname $arg1]
+set sdc_filename [lindex [split [file tail $arg1] .] 0 ]
+set sdc [open $arg1 r]
+set tmp_file [open /tmp/1 "w"] 
+puts -nonewline $tmp_file [string map {"\[" "" "\]" " "} [read $sdc]]     
+close $tmp_file
+}
+```
+The above script is used to remvoe square bractets "[]" and replace it with "".
+
+```
+set tmp_file [open /tmp/1 r]
+set timing_file [open /tmp/3 w]
+set lines [split [read $tmp_file] "\n"]
+set find_clocks [lsearch -all -inline $lines "create_clock*"]
+foreach elem $find_clocks {
+	set clock_port_name [lindex $elem [expr {[lsearch $elem "get_ports"]+1}]]
+	puts "clock_port_name is \"$clock_port_name\" "
+	set clock_period [lindex $elem [expr {[lsearch $elem "-period"]+1}]]
+	puts "clock_period is \"$clock_period\" "
+	set duty_cycle [expr {100 - [expr {[lindex [lindex $elem [expr {[lsearch $elem "-waveform"]+1}]] 1]*100/$clock_period}]}]
+	puts "duty_cycle is \"$duty_cycle\" "
+	puts $timing_file "clock $clock_port_name $clock_period $duty_cycle"
+	}
+close $tmp_file
+
+```
+The above script is used to convert create_clock constraitns into format [2] which can be understandable by Opentimer tool. Basically it searches a pattern **create_clock** and gets the clock_port_name, clock_period and calucaltes dutry cycle. And then writes all the above values in /tmp/3 file as shown in below figure.
+
+<img width="717" <img width="1316" height="903" alt="image" src="https://github.com/user-attachments/assets/927ae7f3-3924-4652-ac5a-6260445751d9" />
+height="192" alt="image" src="https://github.com/user-attachments/assets/a2ab3d64-e6ec-42b5-bcc6-b1a051d82792" />
+
+
+
+
+
+```
+set find_keyword [lsearch -all -inline $lines "set_clock_latency*"]
+set tmp2_file [open /tmp/2 w]
+set new_port_name ""
+foreach elem $find_keyword {
+        set port_name [lindex $elem [expr {[lsearch $elem "get_clocks"]+1}]]
+	if {![string match $new_port_name $port_name]} {
+        	set new_port_name $port_name
+        	set delays_list [lsearch -all -inline $find_keyword [join [list "*" " " $port_name " " "*"] ""]]
+        	set delay_value ""
+        	foreach new_elem $delays_list {
+        		set port_index [lsearch $new_elem "get_clocks"]
+        		lappend delay_value [lindex $new_elem [expr {$port_index-1}]]
+        	}
+		puts -nonewline $tmp2_file "\nat $port_name $delay_value"
+	}
+}
+
+close $tmp2_file
+```
+
+The above script is used to convert set_clock_latency constraitns into format [2] which can be understandable by Opentimer tool. Basically it searches a pattern **set_clock_latency** and gets all the parameters. Then writes all the above values in /tmp/2 file which is furher written in .timings file.
+```
+set find_keyword [lsearch -all -inline $lines "set_clock_transition*"]
+set tmp2_file [open /tmp/2 w]
+set new_port_name ""
+foreach elem $find_keyword {
+        set port_name [lindex $elem [expr {[lsearch $elem "get_clocks"]+1}]]
+        if {![string match $new_port_name $port_name]} {
+		set new_port_name $port_name
+		set delays_list [lsearch -all -inline $find_keyword [join [list "*" " " $port_name " " "*"] ""]]
+        	set delay_value ""
+        	foreach new_elem $delays_list {
+        		set port_index [lsearch $new_elem "get_clocks"]
+        		lappend delay_value [lindex $new_elem [expr {$port_index-1}]]
+        	}
+        	puts -nonewline $tmp2_file "\nslew $port_name $delay_value"
+	}
+}
+
+close $tmp2_file
+set tmp2_file [open /tmp/2 r]
+puts -nonewline $timing_file [read $tmp2_file]
+close $tmp2_file
+
+```
+The above script is used to convert set_clock_transition constraitns into format [2] which can be understandable by Opentimer tool. Basically it searches a pattern **set_clock_transition**  and  gets all the parameters. Then writes all the above values in /tmp/2 file which is furher written in .timings file as shown in below figure.
+
+
+```
+set find_keyword [lsearch -all -inline $lines "set_input_delay*"]
+set tmp2_file [open /tmp/2 w]
+set new_port_name ""
+foreach elem $find_keyword {
+        set port_name [lindex $elem [expr {[lsearch $elem "get_ports"]+1}]]
+        if {![string match $new_port_name $port_name]} {
+                set new_port_name $port_name
+        	set delays_list [lsearch -all -inline $find_keyword [join [list "*" " " $port_name " " "*"] ""]]
+		set delay_value ""
+        	foreach new_elem $delays_list {
+        		set port_index [lsearch $new_elem "get_ports"]
+        		lappend delay_value [lindex $new_elem [expr {$port_index-1}]]
+        	}
+        	puts -nonewline $tmp2_file "\nat $port_name $delay_value"
+	}
+}
+close $tmp2_file
+set tmp2_file [open /tmp/2 r]
+puts -nonewline $timing_file [read $tmp2_file]
+close $tmp2_file
+```
+
+The above script is used to convert set_input_delay constraitns into format [2] which can be understandable by Opentimer tool. Basically it searches a pattern __set_input_delay__ and gets all the parameters. Then writes all the above values in /tmp/2 file which is furher written in .timings file 
+
+
+```
+set find_keyword [lsearch -all -inline $lines "set_input_transition*"]
+set tmp2_file [open /tmp/2 w]
+set new_port_name ""
+foreach elem $find_keyword {
+        set port_name [lindex $elem [expr {[lsearch $elem "get_ports"]+1}]]
+        if {![string match $new_port_name $port_name]} {
+                set new_port_name $port_name
+        	set delays_list [lsearch -all -inline $find_keyword [join [list "*" " " $port_name " " "*"] ""]]
+        	set delay_value ""
+        	foreach new_elem $delays_list {
+        		set port_index [lsearch $new_elem "get_ports"]
+        		lappend delay_value [lindex $new_elem [expr {$port_index-1}]]
+        	}
+        	puts -nonewline $tmp2_file "\nslew $port_name $delay_value"
+	}
+}
+
+close $tmp2_file
+set tmp2_file [open /tmp/2 r]
+puts -nonewline $timing_file [read $tmp2_file]
+close $tmp2_file
+
+```
+The above script is used to convert set_input_transition constraitns into format [2] which can be understandable by Opentimer tool. Basically it searches a pattern __set_input_transition__  and then gets all the parameters and convert into Opentimer format. Then writes all the above values in /tmp/2 file which is furher written in .timings file.
+
+```
+set find_keyword [lsearch -all -inline $lines "set_output_delay*"]
+set tmp2_file [open /tmp/2 w]
+set new_port_name ""
+foreach elem $find_keyword {
+        set port_name [lindex $elem [expr {[lsearch $elem "get_ports"]+1}]]
+        if {![string match $new_port_name $port_name]} {
+                set new_port_name $port_name
+        	set delays_list [lsearch -all -inline $find_keyword [join [list "*" " " $port_name " " "*"] ""]]
+        	set delay_value ""
+        	foreach new_elem $delays_list {
+        		set port_index [lsearch $new_elem "get_ports"]
+        		lappend delay_value [lindex $new_elem [expr {$port_index-1}]]
+        	}
+        	puts -nonewline $tmp2_file "\nrat $port_name $delay_value"
+	}
+}
+
+close $tmp2_file
+set tmp2_file [open /tmp/2 r]
+puts -nonewline $timing_file [read $tmp2_file]
+close $tmp2_file
+```
+
+The above script is used to convert set_output_delay constraitns into format [2] which can be understandable by Opentimer tool. Basically it searches a pattern __set_output_delay__  and then gets all the parameters and convert into Opentimer format. Then writes all the above values in /tmp/2 file which is furher written in .timings file.
+
+```
+set ot_timing_file [open $sdc_dirname/$sdc_filename.timing w]
+set timing_file [open /tmp/3 r]
+while {[gets $timing_file line] != -1} {
+        if {[regexp -all -- {\*} $line]} {
+                set bussed [lindex [lindex [split $line "*"] 0] 1]
+                set final_synth_netlist [open $sdc_dirname/$sdc_filename.final.synth.v r]
+                while {[gets $final_synth_netlist line2] != -1 } {
+                        if {[regexp -all -- $bussed $line2] && [regexp -all -- {input} $line2] && ![string match "" $line]} {
+                        puts -nonewline $ot_timing_file "\n[lindex [lindex [split $line "*"] 0 ] 0 ] [lindex [lindex [split $line2 ";"] 0 ] 1 ] [lindex [split $line "*"] 1 ]"
+                        } elseif {[regexp -all -- $bussed $line2] && [regexp -all -- {output} $line2] && ![string match "" $line]} {
+                        puts -nonewline $ot_timing_file "\n[lindex [lindex [split $line "*"] 0 ] 0 ] [lindex [lindex [split $line2 ";"] 0 ] 1 ] [lindex [split $line "*"] 1 ]"
+                        }
+                }
+        } else {
+        puts -nonewline $ot_timing_file  "\n$line"
+        }
+}
+
+close $timing_file
+puts "set_timing_fpath $sdc_dirname/$sdc_filename.timing"
+}
+
+```
+The above script is used to expand bussed ports into format [2] which can be understandable by Opentimer tool as shown below.
+
+
+#### Creating scripts for Opentimer
+
+```
+
+if {$enable_prelayout_timing == 1} {
+	puts "\nInfo: enable prelayout_timing is $enable_prelayout_timing. Enabling zero-wire load parasitics"
+	set spef_file [open $OutputDirectory/$DesignName.spef w]
+	puts $spef_file "*SPEF \"IEEE 1481-1998\""
+	puts $spef_file "*DESIGN \"$DesignName\""
+	puts $spef_file "*DATE \"Sun Jun 11 11:59:00 2023\""
+	puts $spef_file "*VENDOR \"VLSI System Design\""
+	puts $spef_file "*PROGRAM \"TCL Workshop\""
+	puts $spef_file "*DATE \"0.0\""
+	puts $spef_file "*DESIGN FLOW \"NETLIST_TYPE_VERILOG\""
+	puts $spef_file "*DIVIDER /"
+	puts $spef_file "*DELIMITER : "
+	puts $spef_file "*BUS_DELIMITER [ ]"
+	puts $spef_file "*T_UNIT 1 PS"
+	puts $spef_file "*C_UNIT 1 FF"
+	puts $spef_file "*R_UNIT 1 KOHM"
+	puts $spef_file "*L_UNIT 1 UH"
+}
+close $spef_file
+```
+The above script creates a .spef file and writes all the required commands into it as shown in below
+
+
+
+```
+set conf_file [open $OutputDirectory/$DesignName.conf a]
+puts $conf_file "set_spef_fpath $OutputDirectory/$DesignName.spef"
+puts $conf_file "init_timer"
+puts $conf_file "report_timer"
+puts $conf_file "report_wns"
+puts $conf_file "report_tns"
+puts $conf_file "report_worst_paths -numPaths 10000 " 
+close $conf_file
+```
+
+The above script creates a .conf file and writes all the required commands into it which is then passed as input to Opentimer tool as shown in below
+
+
+
+#### Quality of results (QOR) generation algorithm
+
+This is the final sub-task which involves output generation as a datasheet.
+
+```
+set time_elapsed_in_us [time {exec /home/vsduser/OpenTimer-1.0.5/bin/OpenTimer < $OutputDirectory/$DesignName.conf >& $OutputDirectory/$DesignName.results} ]
+set time_elapsed_in_sec "[expr {[lindex $time_elapsed_in_us 0]/100000}]sec"
+puts "\nInfo: STA finished in $time_elapsed_in_sec seconds"
+puts "\nInfo: Refer to $OutputDirectory/$DesignName.results for warings and errors"
+
+```
+The above script is used to executed the Opnetimer tool by passing openMSP430.conf file as an input the results are stored in openMSP430.results. It also stores the time elapsed during STA in microseconds and seconds as shown below.
+
+<img width="698" height="125" alt="image" src="https://github.com/user-attachments/assets/79d4b047-b95f-454a-8b88-070ec550662f" />
+
+
+
+
+```
+#-------------------- Finding worst outptut violation --------------------------#
+set worst_RAT_slack "-"
+set report_file [open $OutputDirectory/$DesignName.results r]
+set pattern {RAT}
+while {[gets $report_file line] != -1} {
+	if {[regexp $pattern $line]} {
+		set worst_RAT_slack "[expr {[lindex $line 3]/1000}]ns"
+		break
+	} else {
+		continue
+	}
+}
+close $report_file
+#--------------------------- Finding number of outptut violation ------------------------#
+set report_file [open $OutputDirectory/$DesignName.results r]
+set count 0
+while {[gets $report_file line] != -1} {
+	incr count [regexp -all -- $pattern $line]
+}
+set Number_output_violations $count
+close $report_file
+
+#--------------------------- Finding worst setup violation -------------------------#
+set worst_negative_setup_slack "-"
+set report_file [open $OutputDirectory/$DesignName.results r] 
+set pattern {Setup}
+while {[gets $report_file line] != -1} {
+	if {[regexp $pattern $line]} {
+		set worst_negative_setup_slack "[expr {[lindex $line 3]/1000}]ns"
+		break
+	} else {
+		continue
+	}
+}
+close $report_file
+
+
+#-------------------------find number of setup violations--------------------------------#
+set report_file [open $OutputDirectory/$DesignName.results r]
+set count 0
+while {[gets $report_file line] != -1} {
+	incr count [regexp -all -- $pattern $line]
+}
+set Number_of_setup_violations $count
+close $report_file
+
+#-------------------------find worst hold violation--------------------------------#
+set worst_negative_hold_slack "-"
+set report_file [open $OutputDirectory/$DesignName.results r] 
+set pattern {Hold}
+while {[gets $report_file line] != -1} {
+	if {[regexp $pattern $line]} {
+		set worst_negative_hold_slack "[expr {[lindex $line 3]/1000}]ns"
+		break
+	} else {
+		continue
+	}
+}
+close $report_file
+
+#-------------------------find number of hold violations--------------------------------#
+set report_file [open $OutputDirectory/$DesignName.results r]
+set count 0
+while {[gets $report_file line] != -1} {
+	incr count [regexp -all -- $pattern $line]
+}
+set Number_of_hold_violations $count
+close $report_file
+
+#-------------------------find number of instances--------------------------------#
+
+set pattern {Num of gates}
+set report_file [open $OutputDirectory/$DesignName.results r] 
+while {[gets $report_file line] != -1} {
+	if {[regexp $pattern $line]} {
+		set Instance_count "[lindex [join $line " "] 4 ]"
+		break
+	} else {
+		continue
+	}
+}
+close $report_file
+
+
+puts "DesignName is \{$DesignName\}"
+puts "time_elapsed_in_sec is \{$time_elapsed_in_sec\}"
+puts "Instance_count is \{$Instance_count\}"
+puts "worst_negative_setup_slack is \{$worst_negative_setup_slack\}"
+puts "Number_of_setup_violations is \{$Number_of_setup_violations\}"
+puts "worst_negative_hold_slack is \{$worst_negative_hold_slack\}"
+puts "Number_of_hold_violations is \{$Number_of_hold_violations\}"
+puts "worst_RAT_slack is \{$worst_RAT_slack\}"
+puts "Number_output_violations is \{$Number_output_violations\}"
+```
+
+The above script can be used to find different parameters such as worst hold violation, no of hold vioalations etc... which are reported in final output and also displays on terminal.
+
+<img width="502" height="205" alt="image" src="https://github.com/user-attachments/assets/d30e6cde-70e1-4e95-9323-d6c470dca3ce" />
+
+
+```
+puts "\n"
+puts "						****PRELAYOUT TIMING RESULTS**** 					"
+set formatStr "%15s %15s %15s %15s %15s %15s %15s %15s %15s"
+
+puts [format $formatStr "----------" "-------" "--------------" "---------" "---------" "--------" "--------" "-------" "-------"]
+puts [format $formatStr "DesignName" "Runtime" "Instance Count" "WNS Setup" "FEP Setup" "WNS Hold" "FEP Hold" "WNS RAT" "FEP RAT"]
+puts [format $formatStr "----------" "-------" "--------------" "---------" "---------" "--------" "--------" "-------" "-------"]
+foreach design_name $DesignName runtime $time_elapsed_in_sec instance_count $Instance_count wns_setup $worst_negative_setup_slack fep_setup $Number_of_setup_violations wns_hold $worst_negative_hold_slack fep_hold $Number_of_hold_violations wns_rat $worst_RAT_slack fep_rat $Number_output_violations {
+	puts [format $formatStr $design_name $runtime $instance_count $wns_setup $fep_setup $wns_hold $fep_hold $wns_rat $fep_rat]
+}
+
+puts [format $formatStr "----------" "-------" "--------------" "---------" "---------" "--------" "--------" "-------" "-------"]
+puts "\n"
+	
+```
+The above script can be used to show the results in Horizontal format like shown in below figure.
+
+![Image](https://github.com/user-attachments/assets/bfb816b1-82a4-4902-9227-75c82088b225)
+</div>
