@@ -340,7 +340,7 @@ while {$i < $end_of_ports} {
     puts -nonewline $sdc_file "\nset_input_transition -clock \[get_clocks [constraints get cell $related_clock $i]\] -max -fall -source_latency_included [constraints get cell $input_late_fall_slew_start $i] \[get_ports $inp_ports\]"
 
     set i [expr {$i+1}]
-}
+
    ```
 <img width="1243" height="716" alt="image" src="https://github.com/user-attachments/assets/c114ac02-dc44-41f3-9229-fa13a3038d5f" />
 
