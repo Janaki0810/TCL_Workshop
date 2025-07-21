@@ -281,6 +281,7 @@ puts "input_late_fall_slew_start = $input_late_fall_slew_start"
 
 In the figure above, we observe that some input ports are bussed while others are not. However, the constraints.csv file does not indicate which ports are part of a bus and which are individual signals. For better clarity and compatibility with the OpenTimer tool, we need to expand bussed ports into their individual bits. To do this, we must identify whether each input port is a single-bit port or a bus. If it is a bus, we are going to append a '*' to the port name in the .sdc file.
 
+Some of the input ports have multiple spaces between them. The below script removes the spaces between them and writes them in a temporary file. The script reads one of input ports as "input cpu_en" and later it is written in /tmp/1 file as "input cpu_en"
 ```
 set i [expr {$input_ports_start+1}]
 set end_of_ports [expr {$output_ports_start-1}]
@@ -306,6 +307,8 @@ while {$i < $end_of_ports} {
     }
     close $tmp_file
 ```
+<img width="1848" height="304" alt="image" src="https://github.com/user-attachments/assets/fc5ee0e9-d6a7-42c3-9b51-41be038972f3" />
+
 8. Check if the port is bussed (based on the number of tokens)
     ```
     set tmp_file [open /tmp/1 r]
@@ -322,6 +325,8 @@ while {$i < $end_of_ports} {
         set inp_ports [constraints get cell 0 $i]
     }
     ```
+    <img width="800" height="977" alt="image" src="https://github.com/user-attachments/assets/513322c2-bc84-4a02-a59d-bbe8e25ae619" />
+
 9. Write input delay and slew values into SDC file
     ```
     puts -nonewline $sdc_file "\nset_input_delay -clock \[get_clocks [constraints get cell $related_clock $i]\] -min -rise -source_latency_included [constraints get cell $input_early_rise_delay_start $i] \[get_ports $inp_ports\]"
@@ -337,3 +342,6 @@ while {$i < $end_of_ports} {
     set i [expr {$i+1}]
 }
    ```
+<img width="1243" height="716" alt="image" src="https://github.com/user-attachments/assets/c114ac02-dc44-41f3-9229-fa13a3038d5f" />
+
+# Day 4: Complete Scripting and Yosys Synthesis Introduction
